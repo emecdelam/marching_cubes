@@ -6,6 +6,7 @@ const _std = @import("std");
 const _cons = @import("constants.zig");
 const _cam = @import("controls/camera.zig");
 const _key = @import("controls/keys.zig");
+const _gui = @import("controls/display.zig");
 
 pub fn main() anyerror!void {
     _std.log.info("Starting program", .{});
@@ -36,14 +37,19 @@ pub fn main() anyerror!void {
 
         // -- Drawing
         _rl.BeginDrawing();
-        defer _rl.EndDrawing();
 
         _rl.ClearBackground(.{ .r = 50, .g = 50, .b = 50, .a = 255 });
 
+        // -- 3D mode
         _rl.BeginMode3D(camera.*);
-        defer _rl.EndMode3D();
+        _rl.DrawGrid(16, 4.0);
+        _rl.DrawCube(.{ .x = 0, .y = 1, .z = 0 }, 2.0, 2.0, 2.0, _rl.WHITE);
 
-        _rl.DrawCube(.{ .x = 0, .y = 0, .z = 0 }, 2.0, 2.0, 2.0, _rl.WHITE);
-        _std.log.info("Position : {}", .{_cam.camera.position});
+        _rl.EndMode3D();
+
+        // -- Display
+        try _gui.handle_display();
+
+        _rl.EndDrawing();
     }
 }
