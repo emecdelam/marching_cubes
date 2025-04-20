@@ -62,7 +62,7 @@ pub fn draw_nodes(env: *Env) void {
         } else {
             color = _rl.BLACK;
         }
-        _rl.DrawSphere(.{ .x = node.position[0], .y = node.position[1], .z = node.position[2] }, 0.05, color);
+        _rl.DrawSphere(.{ .x = node.position[0], .y = node.position[1], .z = node.position[2] }, 0.03, color);
     }
 }
 fn get_cube_node_indices(env: *Env, x: usize, y: usize, z: usize) [8]Node {
@@ -150,6 +150,9 @@ pub fn draw_cube(env: *Env, index: usize) void {
     }
 }
 pub fn highlight_cube(env: *Env, index: usize) void {
+    if (index >= comptime _std.math.pow(usize, _cons.NUMBER_NODE - 1, 3)) {
+        return;
+    }
     const nodes: [8]Node = get_nodes(env, index);
 
     // These are the 12 edges of a cube, each as a pair of indices into the nodes array
@@ -164,9 +167,10 @@ pub fn highlight_cube(env: *Env, index: usize) void {
     }
 }
 
-pub fn draw_cubes(env: *Env) void {
+pub fn draw_cubes(env: *Env, num: usize) void {
     const num_cube = comptime _std.math.pow(usize, _cons.NUMBER_NODE - 1, 3);
-    for (0..num_cube) |i| {
+    const top = @min(num_cube, num);
+    for (0..top - 1) |i| {
         draw_cube(env, i);
     }
 }

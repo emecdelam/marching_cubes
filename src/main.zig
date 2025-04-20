@@ -8,7 +8,8 @@ const _cam = @import("controls/camera.zig");
 const _key = @import("controls/keys.zig");
 const _gui = @import("controls/display.zig");
 const _cube = @import("marching/cube.zig");
-
+const _stp = @import("controls/step.zig");
+const _sha = @import("misc/shader.zig");
 pub fn main() anyerror!void {
     _std.log.info("Starting program", .{});
     // Allocator
@@ -17,12 +18,16 @@ pub fn main() anyerror!void {
     const allocator = arena.allocator();
 
     // -- Window
+    _rl.SetConfigFlags(_rl.FLAG_MSAA_4X_HINT);
     _rl.InitWindow(_cons.WINDOW_WIDTH, _cons.WINDOW_HEIGHT, "Basic Raymarching");
     defer _rl.CloseWindow();
     _std.log.info("Window created", .{});
 
     // -- FPS target
     _rl.SetTargetFPS(60);
+
+    // -- Shader
+    const shader = _sha.init_shader();
 
     // -- Inits
     _cam.init_camera();
@@ -34,8 +39,17 @@ pub fn main() anyerror!void {
     var t: f32 = 0.0;
     _std.log.info("Entering main loop", .{});
     while (!_rl.WindowShouldClose()) {
-        t += _rl.GetFrameTime();
+        const dt = _rl.GetFrameTime();
+        if (dt < 0.016) {
+            t += 0.016;
+        } else {
+            t += dt;
+        }
         camera.position = .{ .x = 7.0 * _std.math.sin(t / 4.0), .y = 7.0, .z = 7.0 * _std.math.cos(t / 4.0) };
+
+        _rl.SetShaderValue(shader, _rl.GetShaderLocation(shader, "viewPos"), &camera.position, _rl.SHADER_UNIFORM_VEC3);
+        // -- Step
+        _ = _stp.handle_step(t);
 
         // -- Key press
         _key.handle_key();
@@ -51,8 +65,13 @@ pub fn main() anyerror!void {
 
         _rl.DrawGrid(_cons.NUMBER_NODE * 2, _cons.NODE_SPACING);
         _cube.draw_nodes(env);
-        _cube.draw_cubes(env);
-        //_cube.highlight_cube(env, 0);
+
+        // -- Shaders
+        _rl.BeginShaderMode(shader);
+        _cube.draw_cubes(env, _stp.step);
+        _rl.EndShaderMode();
+
+        _cube.highlight_cube(env, _stp.step);
 
         _rl.EndMode3D();
 
