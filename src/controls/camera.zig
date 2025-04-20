@@ -8,7 +8,7 @@ pub var camera: _rl.Camera = undefined;
 
 pub fn init_camera() void {
     camera = _rl.Camera{
-        .position = .{ .x = 0.0, .y = 2.0, .z = 5.0 },
+        .position = .{ .x = 0.0, .y = 5.0, .z = 5.0 },
         .target = .{ .x = 0.0, .y = 1.0, .z = 0.0 },
         .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 },
         .fovy = 60.0, // Field of view
@@ -27,5 +27,9 @@ pub fn move_camera(displacement: _rl.Vector3) void {
 
 pub fn move_target(target: _rl.Vector3) void {
     camera.target = _rl.Vector3Add(camera.target, target);
+    _rl.UpdateCamera(&camera, camera.projection);
+}
+pub fn set_camera(target: _rl.Vector3) void {
+    camera.position = target;
     _rl.UpdateCamera(&camera, camera.projection);
 }
