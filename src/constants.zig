@@ -1,5 +1,5 @@
-pub const WINDOW_WIDTH = 800;
-pub const WINDOW_HEIGHT = 600;
+pub const WINDOW_WIDTH = 1920;
+pub const WINDOW_HEIGHT = 1080;
 
 pub const MOVEMENT_SPEED = 0.1;
 

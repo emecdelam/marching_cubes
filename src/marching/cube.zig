@@ -170,7 +170,7 @@ pub fn highlight_cube(env: *Env, index: usize) void {
 pub fn draw_cubes(env: *Env, num: usize) void {
     const num_cube = comptime _std.math.pow(usize, _cons.NUMBER_NODE - 1, 3);
     const top = @min(num_cube, num);
-    for (0..top - 1) |i| {
+    for (0..top) |i| {
         draw_cube(env, i);
     }
 }
