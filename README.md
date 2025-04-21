@@ -11,3 +11,6 @@ Simply download it and run
 zig build run
 ```
 
+# Note
+
+This is currently a proof of concept, it would ideally be done by using shaders and storing the mesh data instead of computing it each frame
