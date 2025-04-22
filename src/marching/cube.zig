@@ -6,8 +6,9 @@ const _std = @import("std");
 const _cons = @import("../constants.zig");
 const _tab = @import("table.zig");
 const _noi = @import("noise.zig");
+const _msh = @import("../mesh/mesh.zig");
 
-pub const Node = struct { position: [3]f16, set: bool };
+pub const Node = struct { position: [3]f32, set: bool };
 
 pub const Env = struct {
     nodes: []Node,
@@ -28,15 +29,14 @@ pub const Env = struct {
 pub fn init_nodes(allocator: _std.mem.Allocator) !*Env {
     const node_count = comptime _std.math.pow(usize, _cons.NUMBER_NODE, 3);
     var env = try Env.init(allocator, node_count);
-
     var idx: usize = 0;
     for (0.._cons.NUMBER_NODE) |z| {
         for (0.._cons.NUMBER_NODE) |y| {
             for (0.._cons.NUMBER_NODE) |x| {
-                const px: f16 = @floatFromInt(x);
-                const py: f16 = @floatFromInt(y);
-                const pz: f16 = @floatFromInt(z);
-                const offset: f16 = @floatFromInt(_cons.NUMBER_NODE);
+                const px: f32 = @floatFromInt(x);
+                const py: f32 = @floatFromInt(y);
+                const pz: f32 = @floatFromInt(z);
+                const offset: f32 = @floatFromInt(_cons.NUMBER_NODE);
                 const noise = _noi.noise(f64, .{ .x = px - ((offset - 1) / 2.0), .y = py, .z = pz - ((offset - 1) / 2.0) });
                 env.nodes[idx] = Node{
                     .position = .{
@@ -100,14 +100,14 @@ fn get_cube_mask(nodes: [8]Node) u8 {
     }
     return mask;
 }
-fn to_vector(vec: [3]f16) _rl.Vector3 {
+fn to_vector(vec: [3]f32) _rl.Vector3 {
     return _rl.Vector3{ .x = vec[0], .y = vec[1], .z = vec[2] };
 }
-pub fn draw_cube(env: *Env, index: usize) void {
+pub fn march_cube(env: *Env, index: usize) void {
     const nodes: [8]Node = get_nodes(env, index);
 
     //_std.log.info("Nodes : {any}", .{nodes});
-    const tri = _tab.triangle_table[get_cube_mask(nodes)];
+    const tri: [16]i8 = _tab.triangle_table[get_cube_mask(nodes)];
     //_std.log.info("Mask : {b}", .{get_cube_mask(nodes)});
     //_std.log.info("Tri : {any}", .{tri});
 
@@ -142,11 +142,16 @@ pub fn draw_cube(env: *Env, index: usize) void {
             (nodes[l2[0]].position[1] + nodes[l2[1]].position[1]) / 2.0,
             (nodes[l2[0]].position[2] + nodes[l2[1]].position[2]) / 2.0,
         };
+
+        _msh.add_triangle(m0, m1, m2) catch |err| {
+            _std.debug.print("Failed to add triangle: {}\n", .{err});
+            return; // Stop propagation here
+        };
         //_std.log.info("Midpoint 0 {}", .{m0});
         //_std.log.info("Midpoint 1 {}", .{m1});
         //_std.log.info("Midpoint 2 {}", .{m2});
-        _rl.DrawTriangle3D(to_vector(m0), to_vector(m1), to_vector(m2), _rl.GRAY);
-        _rl.DrawTriangle3D(to_vector(m2), to_vector(m1), to_vector(m0), _rl.GRAY);
+        //_rl.DrawTriangle3D(to_vector(m0), to_vector(m1), to_vector(m2), _rl.GRAY);
+        //_rl.DrawTriangle3D(to_vector(m2), to_vector(m1), to_vector(m0), _rl.GRAY);
     }
 }
 pub fn highlight_cube(env: *Env, index: usize) void {
@@ -167,10 +172,9 @@ pub fn highlight_cube(env: *Env, index: usize) void {
     }
 }
 
-pub fn draw_cubes(env: *Env, num: usize) void {
+pub fn march_cubes(env: *Env) void {
     const num_cube = comptime _std.math.pow(usize, _cons.NUMBER_NODE - 1, 3);
-    const top = @min(num_cube, num);
-    for (0..top) |i| {
-        draw_cube(env, i);
+    for (0..num_cube) |i| {
+        march_cube(env, i);
     }
 }
