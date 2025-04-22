@@ -49,6 +49,8 @@ pub fn main() anyerror!void {
     var t: f32 = 0.0;
     _std.log.info("Entering main loop", .{});
     while (!_rl.WindowShouldClose()) {
+        const cam: [*c]_rl.Camera = @ptrCast(camera);
+        _rl.UpdateCamera(cam, _rl.CAMERA_FREE);
         const dt = _rl.GetFrameTime();
         if (dt < 0.016) {
             t += 0.016;
@@ -61,7 +63,7 @@ pub fn main() anyerror!void {
         _ = _stp.handle_step(t);
 
         // -- Key press
-        _key.handle_key();
+        //_key.handle_key();
 
         // -- Drawing
         _rl.BeginDrawing();
