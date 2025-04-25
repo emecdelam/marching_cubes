@@ -1,166 +1,64 @@
-// Simple Perlin noise library for Zig
-// Ported from <https://rosettacode.org/wiki/Perlin_noise#Go>
-
 const std = @import("std");
-const math = std.math;
-const expect = std.testing.expect;
 
-pub fn Vec(comptime T: type) type {
-    return struct {
-        x: T,
-        y: T = 0,
-        z: T = 0,
-    };
+fn hash3D(x: i32, y: i32, z: i32) u32 {
+    const ux: u32 = @bitCast(x);
+    const uy: u32 = @bitCast(y);
+    const uz: u32 = @bitCast(z);
+    var seed: u32 = ux ^ (uy *% 374761393) ^ (uz *% 668265263);
+    seed ^= seed >> 13;
+    seed *%= 1274126177;
+    seed ^= seed >> 16;
+    return seed;
 }
 
-pub fn noise(comptime T: type, opts: Vec(T)) T {
-    return noise3D(
-        T,
-
-        opts.x,
-        opts.y,
-        opts.z,
-    );
+fn lerp(a: f32, b: f32, t: f32) f32 {
+    return a + t * (b - a);
 }
 
-fn Generator(comptime T: type) type {
-    return struct {
-        const Self = @This();
-        permutation_table: [256]u8,
+pub fn linearValueNoise3D(x: f32, y: f32, z: f32) f32 {
+    const xi: i32 = @intFromFloat(std.math.floor(x));
+    const yi: i32 = @intFromFloat(std.math.floor(y));
+    const zi: i32 = @intFromFloat(std.math.floor(z));
 
-        x: T,
-        y: T,
-        z: T,
+    const xf_xi: f32 = @floatFromInt(xi);
+    const yf_yi: f32 = @floatFromInt(yi);
+    const zf_zi: f32 = @floatFromInt(zi);
 
-        u: T,
-        v: T,
-        w: T,
+    const xf = x - xf_xi;
+    const yf = y - yf_yi;
+    const zf = z - zf_zi;
 
-        X: u8,
-        Y: u8,
-        Z: u8,
+    const max_u32_f: f32 = @floatFromInt(std.math.maxInt(u32));
 
-        fn init(comptime permutation_table: [256]u8, x: T, y: T, z: T) Self {
-            return .{
-                .permutation_table = permutation_table,
+    const h000_f: f32 = @floatFromInt(hash3D(xi, yi, zi));
+    const h100_f: f32 = @floatFromInt(hash3D(xi + 1, yi, zi));
+    const h010_f: f32 = @floatFromInt(hash3D(xi, yi + 1, zi));
+    const h110_f: f32 = @floatFromInt(hash3D(xi + 1, yi + 1, zi));
+    const h001_f: f32 = @floatFromInt(hash3D(xi, yi, zi + 1));
+    const h101_f: f32 = @floatFromInt(hash3D(xi + 1, yi, zi + 1));
+    const h011_f: f32 = @floatFromInt(hash3D(xi, yi + 1, zi + 1));
+    const h111_f: f32 = @floatFromInt(hash3D(xi + 1, yi + 1, zi + 1));
 
-                .X = trunc(T, x),
-                .Y = trunc(T, y),
-                .Z = trunc(T, z),
+    const h000 = h000_f / max_u32_f;
+    const h100 = h100_f / max_u32_f;
+    const h010 = h010_f / max_u32_f;
+    const h110 = h110_f / max_u32_f;
+    const h001 = h001_f / max_u32_f;
+    const h101 = h101_f / max_u32_f;
+    const h011 = h011_f / max_u32_f;
+    const h111 = h111_f / max_u32_f;
 
-                .x = x - @floor(x),
-                .y = y - @floor(y),
-                .z = z - @floor(z),
+    const x00 = lerp(h000, h100, xf);
+    const x10 = lerp(h010, h110, xf);
+    const x01 = lerp(h001, h101, xf);
+    const x11 = lerp(h011, h111, xf);
 
-                .u = fade(T, x - @floor(x)),
-                .v = fade(T, y - @floor(y)),
-                .w = fade(T, z - @floor(z)),
-            };
-        }
+    const y0 = lerp(x00, x10, yf);
+    const y1 = lerp(x01, x11, yf);
 
-        fn gradHash(
-            self: Self,
-            comptime x_off: comptime_int,
-            comptime y_off: comptime_int,
-            comptime z_off: comptime_int,
-        ) T {
-            return grad3D(
-                T,
-                self.hash(
-                    x_off,
-                    y_off,
-                    z_off,
-                ),
-                self.x - x_off,
-                self.y - y_off,
-                self.z - z_off,
-            );
-        }
-
-        fn hash(
-            self: Self,
-            add_x: u8,
-            add_y: u8,
-            add_z: u8,
-        ) u8 {
-            return self.permutation_table[
-                self.permutation_table[
-                    self.permutation_table[
-                        self.X +% add_x
-                    ] +% self.Y +% add_y
-                ] +% self.Z +% add_z
-            ];
-        }
-    };
+    return lerp(y0, y1, zf);
 }
 
-fn noise3D(comptime T: type, x_f: T, y_f: T, z_f: T) T {
-    const gen = Generator(T).init(permutation, x_f, y_f, z_f);
-
-    // Add blended results from all 8 corners of the cube
-    return math.lerp(
-        math.lerp(
-            math.lerp(gen.gradHash(0, 0, 0), gen.gradHash(1, 0, 0), gen.u),
-            math.lerp(gen.gradHash(0, 1, 0), gen.gradHash(1, 1, 0), gen.u),
-            gen.v,
-        ),
-        math.lerp(
-            math.lerp(gen.gradHash(0, 0, 1), gen.gradHash(1, 0, 1), gen.u),
-            math.lerp(gen.gradHash(0, 1, 1), gen.gradHash(1, 1, 1), gen.u),
-            gen.v,
-        ),
-        gen.w,
-    );
+pub fn linearValueNoise3DAsBool(x: f32, y: f32, z: f32, threshold: f32) bool {
+    return linearValueNoise3D(x, y, z) > threshold;
 }
-
-fn trunc(comptime T: type, a: T) u8 {
-    return @intCast(@as(
-        isize,
-        @intFromFloat(@floor(a)),
-    ) & 255);
-}
-
-fn grad3D(comptime T: type, h: u8, x: T, y: T, z: T) T {
-    return switch (@as(
-        u4,
-        @truncate(h),
-    )) {
-        0, 12 => x + y,
-        1, 14 => y - x,
-        2 => x - y,
-        3 => -x - y,
-        4 => x + z,
-        5 => z - x,
-        6 => x - z,
-        7 => -x - z,
-        8 => y + z,
-        9, 13 => z - y,
-        10 => y - z,
-        11, 15 => -y - z,
-    };
-}
-
-fn fade(comptime T: type, t: T) T {
-    return t * t * t * (t * (6 * t - 15) + 10);
-}
-
-// Permutation table from the original Java implementation of Perlin noise
-// TODO: Allow this to be overridden
-pub const permutation = [256]u8{
-    151, 160, 137, 91,  90,  15,  131, 13,  201, 95,  96,  53,  194, 233, 7,   225,
-    140, 36,  103, 30,  69,  142, 8,   99,  37,  240, 21,  10,  23,  190, 6,   148,
-    247, 120, 234, 75,  0,   26,  197, 62,  94,  252, 219, 203, 117, 35,  11,  32,
-    57,  177, 33,  88,  237, 149, 56,  87,  174, 20,  125, 136, 171, 168, 68,  175,
-    74,  165, 71,  134, 139, 48,  27,  166, 77,  146, 158, 231, 83,  111, 229, 122,
-    60,  211, 133, 230, 220, 105, 92,  41,  55,  46,  245, 40,  244, 102, 143, 54,
-    65,  25,  63,  161, 1,   216, 80,  73,  209, 76,  132, 187, 208, 89,  18,  169,
-    200, 196, 135, 130, 116, 188, 159, 86,  164, 100, 109, 198, 173, 186, 3,   64,
-    52,  217, 226, 250, 124, 123, 5,   202, 38,  147, 118, 126, 255, 82,  85,  212,
-    207, 206, 59,  227, 47,  16,  58,  17,  182, 189, 28,  42,  223, 183, 170, 213,
-    119, 248, 152, 2,   44,  154, 163, 70,  221, 153, 101, 155, 167, 43,  172, 9,
-    129, 22,  39,  253, 19,  98,  108, 110, 79,  113, 224, 232, 178, 185, 112, 104,
-    218, 246, 97,  228, 251, 34,  242, 193, 238, 210, 144, 12,  191, 179, 162, 241,
-    81,  51,  145, 235, 249, 14,  239, 107, 49,  192, 214, 31,  181, 199, 106, 157,
-    184, 84,  204, 176, 115, 121, 50,  45,  127, 4,   150, 254, 138, 236, 205, 93,
-    222, 114, 67,  29,  24,  72,  243, 141, 128, 195, 78,  66,  215, 61,  156, 180,
-};

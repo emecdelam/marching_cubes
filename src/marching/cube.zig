@@ -33,18 +33,21 @@ pub fn init_nodes(allocator: _std.mem.Allocator) !*Env {
     for (0.._cons.NUMBER_NODE) |z| {
         for (0.._cons.NUMBER_NODE) |y| {
             for (0.._cons.NUMBER_NODE) |x| {
-                const px: f32 = @floatFromInt(x);
-                const py: f32 = @floatFromInt(y);
-                const pz: f32 = @floatFromInt(z);
-                const offset: f32 = @floatFromInt(_cons.NUMBER_NODE);
-                const noise = _noi.noise(f64, .{ .x = px - ((offset - 1) / 2.0), .y = py, .z = pz - ((offset - 1) / 2.0) });
+                const fx: f32 = @floatFromInt(x);
+                const fy: f32 = @floatFromInt(y);
+                const fz: f32 = @floatFromInt(z);
+                const px = fx * _cons.NODE_SPACING;
+                const py = fy * _cons.NODE_SPACING;
+                const pz = fz * _cons.NODE_SPACING;
+                //const noise = _noi.noise(f64, .{ .x = px, .y = py, .z = pz });
+                //_std.log.info("Noise : {}", .{noise});
                 env.nodes[idx] = Node{
                     .position = .{
-                        px - ((offset - 1) / 2.0),
+                        px,
                         py,
-                        pz - ((offset - 1) / 2.0),
+                        pz,
                     },
-                    .set = noise > 0.15,
+                    .set = _noi.linearValueNoise3DAsBool(px, py, pz, _cons.THRESHOLD),
                 };
                 idx += 1;
             }
