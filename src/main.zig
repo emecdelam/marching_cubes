@@ -8,7 +8,6 @@ const _cam = @import("controls/camera.zig");
 const _gui = @import("controls/display.zig");
 const _cube = @import("marching/cube.zig");
 const _msh = @import("mesh/mesh.zig");
-const _stp = @import("controls/step.zig");
 const _sha = @import("mesh/shader.zig");
 
 pub fn main() anyerror!void {
