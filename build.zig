@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // Raylib include
-    const raylib_dep = b.dependency("raylib", .{ .target = target, .optimize = optimize });
+    const raylib_dep = b.dependency("raylib", .{ .target = target, .optimize = optimize, .linux_display_backend = .X11 });
     const raylib = raylib_dep.artifact("raylib");
     exe.linkLibrary(raylib);
     // This declares intent for the executable to be installed into the
